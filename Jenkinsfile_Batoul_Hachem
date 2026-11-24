@@ -27,7 +27,7 @@ pipeline {
         stage('Lint') {
             steps {
                 script {
-                    buildCommand("${env.VENV_PYTHON} -m flake8 app.py tests")
+                    buildCommand("${env.VENV_PYTHON} -m flake8 --jobs=1 app.py tests")
                 }
             }
         }
