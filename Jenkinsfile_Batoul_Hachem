@@ -27,7 +27,7 @@ pipeline {
         stage('Lint') {
             steps {
                 script {
-                    buildCommand("${env.VENV_PYTHON} -m flake8 --jobs=1 app.py tests")
+                    buildCommand("${env.VENV_PYTHON} -m flake8 --jobs=1 app.py deploy.py tests")
                 }
             }
         }
@@ -35,14 +35,45 @@ pipeline {
         stage('Test') {
             steps {
                 script {
-                    buildCommand("${env.VENV_PYTHON} -m pytest")
+                    buildCommand("${env.VENV_PYTHON} -m pytest --junitxml=test-results.xml")
+                }
+            }
+            post {
+                always {
+                    junit 'test-results.xml'
+                }
+            }
+        }
+
+        stage('Coverage') {
+            steps {
+                script {
+                    buildCommand("${env.VENV_PYTHON} -m coverage run --branch --include=app.py -m pytest")
+                    buildCommand("${env.VENV_PYTHON} -m coverage report -m")
+                    buildCommand("${env.VENV_PYTHON} -m coverage xml -o coverage.xml")
+                }
+                archiveArtifacts artifacts: 'coverage.xml'
+            }
+        }
+
+        stage('Security Scan') {
+            steps {
+                script {
+                    buildCommand("${env.VENV_PYTHON} -m bandit -f json -o bandit.json app.py deploy.py")
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'bandit.json'
                 }
             }
         }
 
         stage('Deploy') {
             steps {
-                echo 'Deploying application...'
+                script {
+                    buildCommand("${env.VENV_PYTHON} deploy.py")
+                }
             }
         }
     }
