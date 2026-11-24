@@ -1,0 +1,55 @@
+def buildCommand(String command) {
+    if (isUnix()) {
+        sh command
+    } else {
+        bat command
+    }
+}
+
+pipeline {
+    agent any
+
+    options {
+        disableConcurrentBuilds()
+    }
+
+    stages {
+        stage('Setup') {
+            steps {
+                script {
+                    buildCommand(isUnix() ? 'python3 -m venv venv' : 'python -m venv venv')
+                    env.VENV_PYTHON = isUnix() ? 'venv/bin/python' : 'venv\\Scripts\\python.exe'
+                    buildCommand("${env.VENV_PYTHON} -m pip install -r requirements.txt")
+                }
+            }
+        }
+
+        stage('Lint') {
+            steps {
+                script {
+                    buildCommand("${env.VENV_PYTHON} -m flake8 app.py tests")
+                }
+            }
+        }
+
+        stage('Test') {
+            steps {
+                script {
+                    buildCommand("${env.VENV_PYTHON} -m pytest")
+                }
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                echo 'Deploying application...'
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
+        }
+    }
+}
